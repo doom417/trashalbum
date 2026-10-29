@@ -313,7 +313,7 @@ button, input { font: inherit; color: inherit; }
 .work__frame img { filter: brightness(1.05); }  /* фото чуть светлее оригинала */
 
 .work__title {
-  margin-top: clamp(22px, 4vh, 34px);
+  margin-top: 10px;              /* название сразу под фото */
   font-weight: 400;
   font-size: clamp(32px, 6vw, 52px);
   line-height: 1.1;
@@ -444,7 +444,7 @@ button, input { font: inherit; color: inherit; }
   .top { padding-top: 20px; }
   .brand { font-size: 19px; gap: 10px; }
   .brand .star { height: 28px; }
-  .work__title { margin-top: 18px; }
+  .work__title { margin-top: 8px; }
   .work__frame::before { box-shadow: 0 0 50px 18px var(--glow, rgba(160,165,175,.18)); }
   .sigil { width: 42px; height: 54px; bottom: calc(16px + env(safe-area-inset-bottom)); right: calc(16px + env(safe-area-inset-right)); }
   .sigil.is-left { left: calc(16px + env(safe-area-inset-left)); }
