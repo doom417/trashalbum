@@ -282,51 +282,38 @@ button, input { font: inherit; color: inherit; }
 
 .wall {
   position: relative; z-index: 1;
-  width: min(600px, 64vw);       /* уже, чем раньше: вокруг фото нужно место для рамки */
+  width: min(720px, 100% - 32px);
   margin: clamp(72px, 14vh, 140px) auto 0;
 }
 
-/* --hw = высота/ширина фото; отступы под колючую проволоку сверху и снизу */
-.work { margin: 0; padding-top: calc(var(--hw, 1) * 20%); }
+.work { margin: 0; }
 
 .work__frame {
   position: relative;
   aspect-ratio: var(--ratio, 1);
   background: var(--soot);
 }
-/* Свечение в цвет фотографии */
+/* Свечение в цвет фотографии: прямоугольное, повторяет форму фото.
+   Цвет берётся из конструктора (у каждого фото свой). */
 .work__frame::before {
   content: "";
-  position: absolute; inset: -16% -14%;
+  position: absolute; inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: radial-gradient(closest-side, var(--glow, rgba(160,165,175,.18)), transparent 100%);
+  box-shadow: 0 0 90px 34px var(--glow, rgba(160,165,175,.18));
 }
-.work__frame img {
+.work__frame img, .work__frame video {
   display: block; width: 100%; height: 100%;
   object-fit: cover;
   opacity: 0;
   transition: opacity .7s var(--ease);
   -webkit-user-drag: none; user-select: none; -webkit-touch-callout: none;
 }
-.work__frame img.is-in { opacity: 1; }
+.work__frame img.is-in, .work__frame video.is-in { opacity: 1; }
+.work__frame img, .work__frame video { filter: brightness(1.05); }  /* фото чуть светлее оригинала */
 
-/* Рамка из колючей проволоки (assets/frame.png: чёрная проволока на белом).
-   invert делает фон чёрным, а screen убирает чёрное — остаётся только проволока.
-   Отступы подобраны так, чтобы проволока чуть заходила на края фото. */
-.work__frame::after {
-  content: "";
-  position: absolute;
-  /* проём рамки (1000×1500): проволока по x 220…770, по y 448…1052 */
-  top: -74.2%; bottom: -74.2%;
-  left: -40%; right: -41.8%;
-  pointer-events: none;
-  background: url(frame.png) center / 100% 100% no-repeat;
-  filter: invert(1) brightness(.34) contrast(1.2);   /* яркость проволоки: больше — светлее */
-  mix-blend-mode: screen;
-}
 .work__title {
-  margin-top: calc(var(--hw, 1) * 20% + 12px);  /* ниже нижней проволоки */
+  margin-top: 10px;              /* название сразу под фото */
   font-weight: 400;
   font-size: clamp(32px, 6vw, 52px);
   line-height: 1.1;
@@ -414,13 +401,13 @@ button, input { font: inherit; color: inherit; }
   cursor: pointer;
 }
 .scare.is-on { display: block; animation: scare-in 1.75s linear forwards; }
-.scare img {
+.scare img, .scare video {
   width: 100%; height: 100%;
   object-fit: cover;
   object-position: 50% 42%;
   transform: scale(1.12);
 }
-.scare.is-on img { animation: scare-shake 1.75s linear forwards; }
+.scare.is-on img, .scare.is-on video { animation: scare-shake 1.75s linear forwards; }
 @keyframes scare-in {
   0%   { opacity: 1; }
   82%  { opacity: 1; }
@@ -448,8 +435,8 @@ button, input { font: inherit; color: inherit; }
   .mark.is-glitch .mark__star, .mark.is-glitch .mark__ghost { animation: none; }
   .sigil.is-calling { animation: none; filter: drop-shadow(0 0 12px rgba(47,107,74,.8)); }
   .end__hint { transition: none; }
-  .scare.is-on img { animation: none; transform: scale(1.05); filter: contrast(1.4); }
-  .work__frame img { transition: none; }
+  .scare.is-on img, .scare.is-on video { animation: none; transform: scale(1.05); filter: contrast(1.4); }
+  .work__frame img, .work__frame video { transition: none; }
 }
 
 @media (max-width: 520px) {
@@ -457,7 +444,8 @@ button, input { font: inherit; color: inherit; }
   .top { padding-top: 20px; }
   .brand { font-size: 19px; gap: 10px; }
   .brand .star { height: 28px; }
-  .wall { width: 66vw; }
+  .work__title { margin-top: 8px; }
+  .work__frame::before { box-shadow: 0 0 50px 18px var(--glow, rgba(160,165,175,.18)); }
   .sigil { width: 42px; height: 54px; bottom: calc(16px + env(safe-area-inset-bottom)); right: calc(16px + env(safe-area-inset-right)); }
   .sigil.is-left { left: calc(16px + env(safe-area-inset-left)); }
 }
