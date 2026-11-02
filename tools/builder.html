@@ -124,10 +124,10 @@
   .list { list-style: none; margin: 8px 0 0; padding: 0; }
   .item { display: grid; grid-template-columns: 72px 1fr auto; gap: 16px; align-items: center; padding: 12px 0; border-bottom: 1px solid #141618; }
   .item:last-child { border-bottom: 0; }
-  .item img { width: 72px; height: 72px; object-fit: cover; background: #08090a; display: block; border-radius: 6px; transition: opacity .2s, filter .2s; }
+  .item img, .item video { width: 72px; height: 72px; object-fit: cover; background: #08090a; display: block; border-radius: 6px; transition: opacity .2s, filter .2s; }
   .item input { max-width: none; }
   .item small { display: block; margin-top: 6px; color: var(--faint); font-size: 14px; }
-  .item.is-hidden img { opacity: .3; filter: grayscale(1); }
+  .item.is-hidden img, .item.is-hidden video { opacity: .3; filter: grayscale(1); }
   .item.is-hidden input { color: var(--faint); }
   .ctrls { display: flex; gap: 6px; }
   .ctrls button {
@@ -150,7 +150,7 @@
   .empty { margin: 10px 0 0; color: var(--faint); }
 
   .preview { display: flex; gap: 12px; align-items: center; margin-top: 12px; color: var(--dim); font-size: 15px; }
-  .preview img { width: 72px; height: 72px; object-fit: cover; border-radius: 6px; }
+  .preview img, .preview video { width: 72px; height: 72px; object-fit: cover; border-radius: 6px; }
   .radios { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 4px; }
   .radios label { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
   .radios input { accent-color: var(--moss-hi); }
@@ -170,7 +170,7 @@
   /* проверка скримера */
   .scare { position: fixed; inset: 0; z-index: 100; background: #000; display: none; cursor: pointer; }
   .scare.is-on { display: block; }
-  .scare img { width: 100%; height: 100%; object-fit: cover; }
+  .scare img, .scare video { width: 100%; height: 100%; object-fit: cover; }
 
   .fatal { margin: 30vh auto 0; max-width: 34ch; text-align: center; color: var(--text); font-size: 20px; }
 
@@ -181,7 +181,7 @@
     .step { padding: 20px 18px 22px; }
     .grid2 { grid-template-columns: 1fr; }
     .item { grid-template-columns: 56px 1fr; }
-    .item img { width: 56px; height: 56px; }
+    .item img, .item video { width: 56px; height: 56px; }
     .ctrls { grid-column: 1 / -1; justify-content: flex-end; }
   }
 </style>
@@ -211,7 +211,7 @@
     <div>
       <h1>chaosformalbum studio</h1>
       <p class="lead">Edit the gallery and save it straight to the site. Photos are encrypted in this browser before they leave it.</p>
-      <small class="build">Studio version 2026-11-02</small>
+      <small class="build">Studio version 2026-11-02b</small>
     </div>
   </header>
 
@@ -299,10 +299,10 @@
     <!-- 4. ДОБАВИТЬ -->
     <section class="step">
       <h2><span class="num">4</span>Add photos</h2>
-      <p class="hint">New photos go to the end of the list. Phone model, GPS and other hidden data are removed from them.</p>
+      <p class="hint">New photos go to the end of the list. Phone model, GPS and other hidden data are removed from photos. GIFs and short videos (mp4, webm, mov, up to 35 MB) play on a loop without sound.</p>
       <label class="drop" id="drop">
-        <input type="file" id="files" accept="image/jpeg,image/png,image/webp,image/gif" multiple>
-        <span>Drop photos here or click to choose</span>
+        <input type="file" id="files" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov,.m4v" multiple>
+        <span>Drop photos, GIFs or videos here or click to choose</span>
       </label>
       <p class="status" id="add-status" role="status"></p>
     </section>
@@ -415,7 +415,7 @@
       var headers = { "Authorization": "Bearer " + cfg.token, "Accept": opts.accept || "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" };
       if (opts.body) headers["Content-Type"] = "application/json";
       var ctl = new AbortController();
-      var timer = setTimeout(function () { ctl.abort(); }, opts.body ? 120000 : 20000);
+      var timer = setTimeout(function () { ctl.abort(); }, opts.body ? 600000 : opts.raw ? 180000 : 20000);
       return fetch(base + path, { method: opts.method || "GET", headers: headers, body: opts.body ? JSON.stringify(opts.body) : undefined, cache: "no-store", signal: ctl.signal })
         .then(function (r) {
           clearTimeout(timer);
@@ -816,7 +816,6 @@
       var li = document.createElement("li");
       li.className = "item" + (it.hidden ? " is-hidden" : "");
       li.innerHTML =
-        '<img alt="">' +
         '<div><input type="text" placeholder="Title (optional)"><small></small></div>' +
         '<div class="ctrls">' +
         '<input type="color" data-a="glow" title="Glow color">' +
@@ -824,12 +823,12 @@
         '<button type="button" data-a="down" aria-label="Move down">↓</button>' +
         '<button type="button" data-a="vis"></button>' +
         '<button type="button" data-a="del" aria-label="Delete">✕</button></div>';
-      li.querySelector("img").src = it.url;
+      li.insertBefore(mediaEl(it), li.firstChild);
       var inp = li.querySelector("input");
       inp.value = it.title;
       inp.setAttribute("aria-label", "Title of photo " + (i + 1));
       inp.addEventListener("input", function () { it.title = inp.value; setDirty(true); drawScareOptions(); });
-      li.querySelector("small").textContent = (i + 1) + " · " + it.w + "×" + it.h + " · " + Math.round(it.bytes.length / 1024) + " KB" + (it.hidden ? " · hidden" : "");
+      li.querySelector("small").textContent = (i + 1) + " · " + it.w + "×" + it.h + " · " + sizeText(it.bytes.length) + (isVideo(it.type) ? " · video" : it.type === "image/gif" ? " · gif" : "") + (it.hidden ? " · hidden" : "");
       var vis = li.querySelector('[data-a="vis"]');
       vis.innerHTML = it.hidden ? EYE_OFF : EYE;
       vis.setAttribute("aria-pressed", String(it.hidden));
@@ -863,7 +862,10 @@
 
   /* ---- 4. добавить фото ---- */
   function addFiles(fileList) {
-    var files = Array.prototype.filter.call(fileList, function (f) { return /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif)$/i.test(f.name); });
+    var files = Array.prototype.filter.call(fileList, function (f) { return /^(image|video)\//.test(f.type) || /\.(jpe?g|png|webp|gif|mp4|m4v|webm|mov)$/i.test(f.name); });
+    var big = files.filter(function (f) { return f.size > MAX_MEDIA; });
+    files = files.filter(function (f) { return f.size <= MAX_MEDIA; });
+    if (big.length) say("add-status", "Too big (over 35 MB), skipped: " + big.map(function (f) { return f.name; }).join(", ") + ". Make the video shorter or smaller.", "bad");
     if (!files.length) return;
     var n = 0;
     files.reduce(function (p, f) {
@@ -872,9 +874,9 @@
         return fromFile(f).then(function (it) { it.id = null; it.hidden = false; it.dirty = true; S.items.push(it); });
       });
     }, Promise.resolve()).then(function () {
-      say("add-status", "Added " + files.length + (files.length === 1 ? " photo" : " photos") + " to the end of the list.", "good");
+      say("add-status", "Added " + files.length + (files.length === 1 ? " file" : " files") + " to the end of the list." + (big.length ? " Skipped (over 35 MB): " + big.map(function (f) { return f.name; }).join(", ") + "." : ""), big.length ? "bad" : "good");
     }).catch(function (err) {
-      console.error(err); say("add-status", "Could not read one of the photos.", "bad");
+      console.error(err); say("add-status", "Could not read one of the files. If it is a video, try mp4 (H.264).", "bad");
     }).then(function () { setDirty(true); drawList(); });
   }
   $("files").addEventListener("change", function (e) { addFiles(e.target.files); e.target.value = ""; });
@@ -909,7 +911,7 @@
     $("scare-file-wrap").hidden = S.scareMode !== "file";
     var img = scareImage(), pv = $("scare-preview");
     pv.hidden = !img;
-    if (img) { pv.querySelector("img").src = img.url; pv.querySelector("span").textContent = img.w + "×" + img.h; }
+    if (img) { pv.replaceChild(mediaEl(img), pv.firstElementChild); pv.querySelector("span").textContent = img.w + "×" + img.h + (isVideo(img.type) ? " · video" : ""); }
   }
 
   function drawScare() {
@@ -925,7 +927,9 @@
   $("scare-file").addEventListener("change", function (e) {
     var f = e.target.files[0];
     if (!f) return;
-    fromFile(f).then(function (it) { it.id = null; it.dirty = true; S.scareFile = it; setDirty(true); drawScareOptions(); });
+    if (f.size > MAX_MEDIA) { alert("This file is over 35 MB. Pick a smaller one."); e.target.value = ""; return; }
+    fromFile(f).then(function (it) { it.id = null; it.dirty = true; S.scareFile = it; setDirty(true); drawScareOptions(); })
+      .catch(function (err) { console.error(err); alert("Could not read this file. If it is a video, try mp4 (H.264)."); });
   });
   Array.prototype.forEach.call(document.querySelectorAll('input[name="snd"]'), function (r) {
     r.addEventListener("change", function () { S.sound.mode = r.value; setDirty(true); drawScare(); });
@@ -952,11 +956,12 @@
     }
     var img = scareImage(), sc = $("scare");
     if (!img) return;
-    sc.querySelector("img").src = img.url;
+    sc.innerHTML = "";
+    sc.appendChild(mediaEl(img));
     sc.classList.add("is-on");
-    setTimeout(function () { sc.classList.remove("is-on"); }, 1600);
+    setTimeout(function () { sc.classList.remove("is-on"); sc.innerHTML = ""; }, 1600);
   });
-  $("scare").addEventListener("click", function () { $("scare").classList.remove("is-on"); });
+  $("scare").addEventListener("click", function () { $("scare").classList.remove("is-on"); $("scare").innerHTML = ""; });
 
   /* ================= сохранение ================= */
   $("save").addEventListener("click", function () {
@@ -1133,7 +1138,79 @@
     return [hue(p, q, h + 1 / 3), hue(p, q, h), hue(p, q, h - 1 / 3)].map(function (v) { return Math.round(v * 255); });
   }
 
+  var MAX_MEDIA = 35 * 1024 * 1024;
+  function isVideo(type) { return /^video\//.test(type || ""); }
+  function sizeText(n) { return n >= 1048576 ? (n / 1048576).toFixed(1) + " MB" : Math.round(n / 1024) + " KB"; }
+
+  // превью: картинка или зацикленное видео без звука
+  function mediaEl(it) {
+    var el;
+    if (isVideo(it.type)) {
+      el = document.createElement("video");
+      el.muted = true; el.loop = true; el.autoplay = true; el.playsInline = true;
+      el.setAttribute("muted", ""); el.setAttribute("playsinline", "");
+      el.src = it.url;
+      var p = el.play();
+      if (p && p.catch) p.catch(function () {});
+    } else {
+      el = document.createElement("img");
+      el.alt = "";
+      el.src = it.url;
+    }
+    return el;
+  }
+
+  // GIF: ставим бесконечный повтор (блок NETSCAPE2.0, счётчик 0), даже если гифку сохранили «один раз»
+  function loopGif(u8) {
+    try {
+      if (u8[0] !== 0x47 || u8[1] !== 0x49 || u8[2] !== 0x46) return u8;
+      var i = 13;
+      if (u8[10] & 0x80) i += 3 * (1 << ((u8[10] & 7) + 1));
+      // уже есть блок повтора: меняем счётчик на 0
+      for (var j = i; j < Math.min(u8.length - 19, i + 4096); j++) {
+        if (u8[j] === 0x21 && u8[j + 1] === 0xFF && u8[j + 2] === 0x0B &&
+            String.fromCharCode.apply(null, u8.subarray(j + 3, j + 14)) === "NETSCAPE2.0") {
+          var out = u8.slice();
+          out[j + 16] = 0; out[j + 17] = 0;
+          return out;
+        }
+      }
+      var block = new Uint8Array([0x21, 0xFF, 0x0B, 0x4E, 0x45, 0x54, 0x53, 0x43, 0x41, 0x50, 0x45, 0x32, 0x2E, 0x30, 0x03, 0x01, 0x00, 0x00, 0x00]);
+      var res = new Uint8Array(u8.length + block.length);
+      res.set(u8.subarray(0, i), 0);
+      res.set(block, i);
+      res.set(u8.subarray(i), i + block.length);
+      return res;
+    } catch (err) { return u8; }
+  }
+
+  // видео: размеры и цвет свечения по кадру из начала ролика
+  function videoInfo(url) {
+    return new Promise(function (res, rej) {
+      var v = document.createElement("video");
+      v.muted = true; v.playsInline = true; v.preload = "auto";
+      var done = false;
+      var t = setTimeout(function () { finish(); }, 15000);
+      function finish() {
+        if (done) return;
+        done = true; clearTimeout(t);
+        if (!v.videoWidth) { rej(new Error("Unsupported video")); return; }
+        var glow;
+        try { glow = glowOf(v); } catch (e) { glow = [160, 165, 175]; }
+        res({ w: v.videoWidth, h: v.videoHeight, glow: glow });
+        v.removeAttribute("src"); v.load();
+      }
+      v.onloadedmetadata = function () { v.currentTime = Math.min(0.5, (v.duration || 1) / 3); };
+      v.onseeked = finish;
+      v.onerror = function () { done = true; clearTimeout(t); rej(new Error("Unsupported video")); };
+      v.src = url;
+    });
+  }
+
   function guessType(name, u8) {
+    if (/\.(mp4|m4v)$/i.test(name)) return "video/mp4";
+    if (/\.webm$/i.test(name)) return "video/webm";
+    if (/\.mov$/i.test(name)) return "video/quicktime";
     if (u8[0] === 0xFF && u8[1] === 0xD8) return "image/jpeg";
     if (u8[0] === 0x89 && u8[1] === 0x50) return "image/png";
     if (u8[0] === 0x47 && u8[1] === 0x49) return "image/gif";
@@ -1149,11 +1226,17 @@
         ? reencode(new Blob([bytes], { type: type }))
         : Promise.resolve(stripJpeg(bytes));
     }
+    if (type === "image/gif" && !known) work = Promise.resolve(loopGif(bytes));
     return work.then(function (clean) {
       var blob = new Blob([clean], { type: type });
       var url = URL.createObjectURL(blob);
       if (known && known.w && known.glow) {
         return { uid: ++uidSeq, title: title, bytes: clean, type: type, w: known.w, h: known.h, glow: known.glow, url: url };
+      }
+      if (isVideo(type)) {
+        return videoInfo(url).then(function (vi) {
+          return { uid: ++uidSeq, title: title, bytes: clean, type: type, w: vi.w, h: vi.h, glow: vi.glow, url: url };
+        });
       }
       return createImageBitmap(blob).then(function (bmp) {
         var it = { uid: ++uidSeq, title: title, bytes: clean, type: type, w: bmp.width, h: bmp.height, glow: glowOf(bmp), url: url };
@@ -1167,7 +1250,9 @@
     return file.arrayBuffer().then(function (ab) {
       var u8 = new Uint8Array(ab);
       var title = file.name.replace(/\.[^.]+$/, "").replace(/[\s_-]*\d+$/, "");
-      return prepare(u8, file.type || guessType(file.name, u8), title, null);
+      var type = file.type || guessType(file.name, u8);
+      if (type === "video/x-m4v") type = "video/mp4";
+      return prepare(u8, type, title, null);
     });
   }
 
