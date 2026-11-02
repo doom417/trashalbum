@@ -119,8 +119,16 @@ var CONFIG = {
         active++;
         Lock.loadMedia("", key, job.item.id, job.item.type)
           .then(function (url) {
-            job.img.onload = function () { job.img.classList.add("is-in"); };
-            job.img.src = url;
+            var el = job.img;
+            if (el.tagName === "VIDEO") {
+              el.onloadeddata = function () { el.classList.add("is-in"); };
+              el.src = url;
+              var p = el.play();
+              if (p && p.catch) p.catch(function () {});
+            } else {
+              el.onload = function () { el.classList.add("is-in"); };
+              el.src = url;
+            }
           })
           .catch(function (err) { console.error(err); })
           .then(function () { active--; pump(); });
@@ -145,6 +153,19 @@ var CONFIG = {
     return s;
   }
 
+  // видео (mp4, webm, mov) крутится по кругу без звука, как гифка
+  function isVideo(type) { return /^video\//.test(type || ""); }
+  function loopVideo() {
+    var v = document.createElement("video");
+    v.muted = true; v.loop = true; v.autoplay = true; v.playsInline = true;
+    v.setAttribute("muted", ""); v.setAttribute("playsinline", ""); v.setAttribute("webkit-playsinline", "");
+    v.disablePictureInPicture = true;
+    v.setAttribute("disablepictureinpicture", "");
+    v.setAttribute("controlslist", "nodownload nofullscreen noremoteplayback");
+    v.preload = "auto";
+    return v;
+  }
+
   // название всегда в кавычках “…”, даже если в конструкторе их не написали
   function quote(t) {
     t = String(t).trim().replace(/^[«"“„']+|[»"”']+$/g, "");
@@ -162,15 +183,20 @@ var CONFIG = {
       var fig = document.createElement("figure");
       fig.className = "work";
       fig.style.setProperty("--ratio", it.w + " / " + it.h);
-      fig.style.setProperty("--hw", (it.h / it.w).toFixed(4));
       if (it.glow) fig.style.setProperty("--glow", "rgba(" + it.glow.join(",") + ",.5)");
 
       var frame = document.createElement("div");
       frame.className = "work__frame";
-      var img = document.createElement("img");
-      img.alt = it.title ? quote(it.title) : "";
+      var img;
+      if (isVideo(it.type)) {
+        img = loopVideo();
+        if (it.title) img.setAttribute("aria-label", quote(it.title));
+      } else {
+        img = document.createElement("img");
+        img.alt = it.title ? quote(it.title) : "";
+        img.decoding = "async";
+      }
       img.draggable = false;
-      img.decoding = "async";
       frame.appendChild(img);
       fig.appendChild(frame);
 
@@ -192,10 +218,10 @@ var CONFIG = {
 
   // не даём перетаскивать и сохранять картинки правым кликом
   document.addEventListener("contextmenu", function (e) {
-    if (e.target && e.target.tagName === "IMG") e.preventDefault();
+    if (e.target && (e.target.tagName === "IMG" || e.target.tagName === "VIDEO")) e.preventDefault();
   });
   document.addEventListener("dragstart", function (e) {
-    if (e.target && e.target.tagName === "IMG") e.preventDefault();
+    if (e.target && (e.target.tagName === "IMG" || e.target.tagName === "VIDEO")) e.preventDefault();
   });
 
   /* ---------- логотип в углу появляется, когда шапка уехала ---------- */
@@ -241,6 +267,19 @@ var CONFIG = {
     if (!s) { scareReady = Promise.resolve(false); return scareReady; }
     scareReady = Lock.loadMedia("", key, s.id, s.type)
       .then(function (url) {
+        if (isVideo(s.type)) {
+          // скример-видео: заменяем картинку на видео и ждём, пока оно будет готово
+          var v = loopVideo();
+          v.autoplay = false; v.removeAttribute("autoplay");
+          v.id = "scare-img";
+          scareImg.parentNode.replaceChild(v, scareImg);
+          scareImg = v;
+          return new Promise(function (res) {
+            v.onloadeddata = res; v.onerror = res;
+            v.src = url;
+            v.load();
+          });
+        }
         scareImg.src = url;
         return scareImg.decode ? scareImg.decode().catch(function () {}) : null;
       })
@@ -268,6 +307,7 @@ var CONFIG = {
   function hideScare() {
     clearTimeout(scareTimer);
     scare.classList.remove("is-on");
+    if (scareImg.tagName === "VIDEO") scareImg.pause();
   }
 
   function fire() {
@@ -278,6 +318,11 @@ var CONFIG = {
       scare.classList.remove("is-on");
       void scare.offsetWidth;
       scare.classList.add("is-on");
+      if (scareImg.tagName === "VIDEO") {
+        scareImg.currentTime = 0;
+        var p = scareImg.play();
+        if (p && p.catch) p.catch(function () {});
+      }
       clearTimeout(scareTimer);
       scareTimer = setTimeout(hideScare, 1750);
     });
